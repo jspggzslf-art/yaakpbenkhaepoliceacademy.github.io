@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8" />
+    <title>ข้อสอบนายสิบตำรวจ</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f9f9f9; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 8px #ccc; }
+        h1 { text-align: center; color: #004080; }
+        label { display: block; margin: 12px 0 4px; }
+        input[type="text"], input[type="password"] { width: 100%; padding: 8px; }
+        button { background-color: #004080; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin-top: 12px; }
+        button:hover { background-color: #00264d; }
+        #timer { font-size: 20px; color: red; float: right; }
+        .question { margin: 20px 0; }
+        .options label { display: block; margin: 8px 0; }
+        #submitExam { margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="container" id="loginPage">
+    <h1>เข้าสู่ระบบก่อนทำข้อสอบ</h1>
+    <label for="username">ชื่อผู้ใช้:</label>
+    <input type="text" id="username" required />
+    <label for="password">รหัสผ่าน:</label>
+    <input type="password" id="password" required />
+    <button onclick="login()">เข้าสู่ระบบ</button>
+</div>
+
+<div class="container" id="examPage" style="display:none;">
+    <h1>ข้อสอบนายสิบตำรวจ <span id="timer">03:00:00</span></h1>
+    <div id="questionContainer"></div>
+    <button id="submitExam" onclick="submitExam()">ส่งข้อสอบ</button>
+</div>
+
+<div class="container" id="resultPage" style="display:none;">
+    <h1>ผลการสอบ</h1>
+    <p id="resultText"></p>
+</div>
+
+<script>
+
+// ตัวอย่างคำถาม 3 ข้อ (ถ้าต้องการ จะเพิ่มเป็น 150 ข้อได้)
+const questions = [
+    {
+        question: "ข้อใดเป็นหน้าที่ของตำรวจ?",
+        options: ["รักษาความสงบ", "ประกอบธุรกิจส่วนตัว", "ดูแลสวนสาธารณะ", "ทำงานในโรงพยาบาล"],
+        answer: 0
+    },
+    {
+        question: "สีไฟที่ใช้สัญญาณไฟจราจร แสดงให้หยุดคือสีอะไร?",
+        options: ["สีเขียว", "สีแดง", "สีเหลือง", "สีน้ำเงิน"],
+        answer: 1
+    },
+    {
+        question: "ตำรวจต้องแต่งกายอย่างไรขณะปฏิบัติหน้าที่?",
+        options: ["สวมชุดลำลอง", "สวมเครื่องแบบตำรวจ", "แต่งชุดนักเรียน", "แต่งชุดกีฬา"],
+        answer: 1
+    }
+];
+
+// เก็บคำตอบผู้สอบ
+const userAnswers = [];
+
+let currentQuestionIndex = 0;
+let timeLeft = 3 * 60 * 60; // 3 ชั่วโมงในหน่วยวินาที
+let timerInterval;
+
+function login() {
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
+
+    if(username === "" || password === "") {
+        alert("กรุณากรอกชื่อผู้ใช้และรหัสผ่าน");
+        return;
+    }
+
+    // ในตัวอย่างนี้ไม่ตรวจสอบรหัสผ่านจริงๆ แค่ผ่านไปหน้าเข้าสอบ
+    document.getElementById('loginPage').style.display = 'none';
+    document.getElementById('examPage').style.display = 'block';
+
+    showQuestion(currentQuestionIndex);
+    startTimer();
+}
+
+function showQuestion(index) {
+    const container = document.getElementById('questionContainer');
+    container.innerHTML = "";
+
+    if(index >= questions.length) {
+        container.innerHTML = "<p>ทำข้อสอบครบแล้ว กดส่งข้อสอบได้เลย</p>";
+        return;
+    }
+
+    const q = questions[index];
+    const div = document.createElement('div');
+    div.className = 'question';
+
+    const questionTitle = document.createElement('h3');
+    questionTitle.textContent = `ข้อที่ ${index + 1}: ${q.question}`;
+    div.appendChild(questionTitle);
+
+    const optionsDiv = document.createElement('div');
+    optionsDiv.className = 'options';
+
+    q.options.forEach((opt, i) => {
+        const label = document.createElement('label');
+        const radio = document.createElement('input');
+        radio.type = 'radio';
+        radio.name = 'answer';
+        radio.value = i;
+        if(userAnswers[index] === i) {
+            radio.checked = true;
+        }
+        label.appendChild(radio);
+        label.appendChild(document.createTextNode(opt));
+        optionsDiv.appendChild(label);
+    });
+
+    div.appendChild(optionsDiv);
+
+    // ปุ่มไปข้อถัดไป
+    const nextBtn = document.createElement('button');
+    nextBtn.textContent = (index === questions.length - 1) ? "ข้อสุดท้าย" : "ข้อถัดไป";
+    nextBtn.onclick = () => {
+        saveAnswer();
+        if(currentQuestionIndex < questions.length - 1) {
+            currentQuestionIndex++;
+            showQuestion(currentQuestionIndex);
+        }
+    };
+    div.appendChild(nextBtn);
+
+    container.appendChild(div);
+}
+
+function saveAnswer() {
+    const selected = document.querySelector('input[name="answer"]:checked');
+    if(selected) {
+        userAnswers[currentQuestionIndex] = parseInt(selected.value);
+    }
+}
+
+function startTimer() {
+    updateTimerDisplay();
+
+    timerInterval = setInterval(() => {
+        timeLeft--;
+        updateTimerDisplay();
+
+        if(timeLeft <= 0) {
+            clearInterval(timerInterval);
+            alert("เวลาสอบหมดแล้ว ระบบจะส่งข้อสอบให้อัตโนมัติ");
+            submitExam();
+        }
+    }, 1000);
+}
+
+function updateTimerDisplay() {
+    const hours = Math.floor(timeLeft / 3600);
+    const minutes = Math.floor((timeLeft % 3600) / 60);
+    const seconds = timeLeft % 60;
+
+    document.getElementById('timer').textContent =
+        `${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
+}
+
+function submitExam() {
+    saveAnswer();
+    clearInterval(timerInterval);
+
+    let score = 0;
+    questions.forEach((q, i) => {
+        if(userAnswers[i] === q.answer) {
+            score++;
+        }
+    });
+
+    document.getElementById('examPage').style.display = 'none';
+    document.getElementById('resultPage').style.display = 'block';
+
+    document.getElementById('resultText').textContent = `คุณทำคะแนนได้ ${score} จาก ${questions.length} ข้อ`;
+}
+
+</script>
+
+</body>
+</html>
